@@ -30,7 +30,14 @@ const Login = () => {
       if (authError) throw authError;
 
       if (isSignUp) {
-        toast.success('Account created! Check your email for the confirmation link.');
+        if (data?.session) {
+          toast.success('Account created successfully!');
+          navigate('/');
+        } else {
+          toast.success('Account created! Check your email for the confirmation link.');
+          setIsSignUp(false);
+          setPassword('');
+        }
       } else {
         toast.success('Welcome back!');
         navigate('/');
