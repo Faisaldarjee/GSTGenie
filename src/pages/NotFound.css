@@ -1,0 +1,80 @@
+.notfound-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #F4F7FB 0%, #EEF2FF 50%, #F5F3FF 100%);
+}
+
+.notfound-content {
+  text-align: center;
+  max-width: 460px;
+  padding: 40px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notfound-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #0047D1, #7C3AED);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  box-shadow: 0 12px 32px rgba(0, 71, 209, 0.25);
+}
+
+.notfound-code {
+  font-size: 80px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #0047D1, #7C3AED);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.notfound-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 12px;
+}
+
+.notfound-desc {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.notfound-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.notfound-actions .btn {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.notfound-actions .btn-outline {
+  background: white;
+  border: 1px solid #E2E8F0;
+  color: #666;
+}
+
+.notfound-actions .btn-outline:hover {
+  background: #F8FAFC;
+  color: #1A1A1A;
+}
