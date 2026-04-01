@@ -125,9 +125,6 @@ const InvoiceList = () => {
         <div className="section-info">
           <p className="text-p">Manage and track your business transactions</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/invoices/create')}>
-          <Plus size={18} /><span>New Invoice</span>
-        </button>
       </div>
 
       <div className="stats-row" style={{ marginBottom: '30px' }}>
