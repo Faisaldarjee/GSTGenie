@@ -137,10 +137,6 @@ const Dashboard = () => {
           <h1 className="greeting-text">{getGreeting()}, {displayName} 👋</h1>
           <p className="greeting-sub">Here's what's happening with your business today</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/invoices/create')}>
-          <Plus size={18} />
-          <span>New Invoice</span>
-        </button>
       </div>
 
       <div className="dashboard-grid">
