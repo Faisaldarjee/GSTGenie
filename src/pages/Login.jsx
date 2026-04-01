@@ -6,6 +6,7 @@ import { Zap, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import './Login.css';
 
 const Login = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +24,7 @@ const Login = () => {
 
     try {
       const { data, error: authError } = isSignUp 
-        ? await signUp({ email, password })
+        ? await signUp({ email, password, options: { data: { full_name: name } } })
         : await signIn({ email, password });
 
       if (authError) throw authError;
@@ -53,7 +54,23 @@ const Login = () => {
         </div>
 
         <form className="login-form" onSubmit={handleAuth}>
-          <div className="form-group">
+          {isSignUp && (
+            <div className="form-group">
+              <label>FULL NAME</label>
+              <div className="input-wrapper">
+                <input 
+                  type="text" 
+                  placeholder="John Doe" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  style={{ paddingLeft: '16px' }}
+                  required={isSignUp}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className={`form-group ${isSignUp ? 'mt-4' : ''}`}>
             <label>EMAIL ADDRESS</label>
             <div className="input-wrapper">
               <Mail size={18} />

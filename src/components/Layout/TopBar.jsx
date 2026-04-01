@@ -27,7 +27,7 @@ const TopBar = ({ title }) => {
 
       if (data?.business_name) setDisplayName(data.business_name);
       else if (data?.owner_name) setDisplayName(data.owner_name);
-      else setDisplayName(user.email?.split('@')[0] || 'User');
+      else setDisplayName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
     };
     fetchProfile();
   }, [user]);

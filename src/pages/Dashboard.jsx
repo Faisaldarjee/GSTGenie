@@ -41,9 +41,9 @@ const Dashboard = () => {
 
       if (!profile && !skipped) {
         setShowOnboarding(true);
-        setDisplayName(user.email?.split('@')[0] || 'there');
+        setDisplayName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'there');
       } else {
-        setDisplayName(profile?.owner_name || profile?.business_name || user.email?.split('@')[0] || 'there');
+        setDisplayName(profile?.owner_name || profile?.business_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'there');
       }
       setOnboardingChecked(true);
     };
