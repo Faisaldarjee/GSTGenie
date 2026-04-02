@@ -285,13 +285,231 @@ const hsnCodes = [
 ];
 
 // ═══════════════════════════════════════════
-// SEARCH FUNCTION — Fuzzy match on description, code, or category
+// SYNONYM MAPPING — Maps common English & Hindi/Hinglish terms to keywords
+// ═══════════════════════════════════════════
+const SYNONYMS = {
+  // Furniture
+  'chair': ['seats', 'chairs', 'furniture', 'office'],
+  'kursi': ['seats', 'chairs', 'furniture'],
+  'table': ['desks', 'tables', 'furniture', 'cabinets'],
+  'mez': ['desks', 'tables', 'furniture'],
+  'desk': ['desks', 'tables', 'furniture'],
+  'sofa': ['seats', 'furniture'],
+  'palang': ['mattresses', 'furniture', 'bed'],
+  'bed': ['mattresses', 'cushions', 'pillows'],
+  'mattress': ['mattresses', 'cushions'],
+  'gadda': ['mattresses', 'cushions'],
+  
+  // Electronics
+  'phone': ['mobile', 'smartphones', 'phones'],
+  'mobile': ['phones', 'smartphones', 'mobile'],
+  'smartphone': ['phones', 'smartphones', 'mobile'],
+  'laptop': ['laptops', 'computers', 'data processing'],
+  'computer': ['laptops', 'computers', 'data processing'],
+  'pc': ['laptops', 'computers', 'data processing'],
+  'monitor': ['monitors', 'display', 'tvs'],
+  'tv': ['tvs', 'monitors', 'projectors'],
+  'television': ['tvs', 'monitors'],
+  'ac': ['air conditioning'],
+  'cooler': ['air conditioning', 'fans'],
+  'fridge': ['refrigerators', 'freezers'],
+  'refrigerator': ['refrigerators', 'freezers'],
+  'printer': ['printers', 'scanners'],
+  'camera': ['cctv', 'cameras', 'webcams'],
+  'headphone': ['headphones', 'speakers', 'microphones'],
+  'earphone': ['headphones', 'speakers'],
+  'speaker': ['speakers', 'headphones', 'microphones'],
+  'led': ['led lamps', 'tube lights'],
+  'bulb': ['led lamps', 'tube lights', 'light fittings'],
+  'light': ['lamps', 'light fittings', 'led'],
+  'batti': ['lamps', 'light fittings', 'led'],
+  'fan': ['fans', 'air pumps'],
+  'pankha': ['fans', 'air pumps'],
+  'charger': ['chargers', 'power adapters', 'ups'],
+  'ups': ['ups', 'power adapters', 'chargers'],
+  'washing': ['washing machines', 'washing'],
+  'machine': ['machinery', 'machines'],
+  'usb': ['usb drives', 'storage media'],
+  'pendrive': ['usb drives', 'storage media'],
+
+  // Stationery
+  'pen': ['pens', 'markers', 'crayons', 'ball'],
+  'pencil': ['pens', 'markers', 'stationery'],
+  'kalam': ['pens', 'markers', 'stationery'],
+  'notebook': ['notebooks', 'diaries', 'registers'],
+  'diary': ['diaries', 'notebooks'],
+  'copy': ['notebooks', 'registers'],
+  'kitab': ['books', 'printing', 'paper'],
+  'paper': ['paper', 'stationery'],
+  'kagaz': ['paper', 'stationery'],
+  
+  // Vehicles & Parts
+  'car': ['motor cars', 'vehicles', 'passenger'],
+  'gaadi': ['motor cars', 'vehicles', 'motorcycles'],
+  'bike': ['motorcycles', 'scooters'],
+  'scooter': ['motorcycles', 'scooters'],
+  'cycle': ['bicycles', 'cycles'],
+  'tyre': ['tyres', 'rubber'],
+  'tire': ['tyres', 'rubber'],
+  'petrol': ['petroleum', 'fuel', 'diesel'],
+  'diesel': ['petroleum', 'fuel', 'diesel'],
+  'tel': ['petroleum', 'fuel', 'oil'],
+  
+  // Clothing & Jewellery
+  'gold': ['gold', 'jewellery'],
+  'sona': ['gold', 'jewellery'],
+  'silver': ['silver', 'jewellery'],
+  'chandi': ['silver', 'jewellery'],
+  'diamond': ['diamonds', 'precious stones'],
+  'heera': ['diamonds', 'precious stones'],
+  'ring': ['jewellery', 'gold', 'silver'],
+  'anguthi': ['jewellery', 'gold', 'silver'],
+  'necklace': ['jewellery', 'gold', 'silver'],
+  'shirt': ['shirts', 'blouses'],
+  'kameez': ['shirts', 'blouses', 'suits'],
+  'tshirt': ['t-shirts', 'singlets', 'tank tops'],
+  't-shirt': ['t-shirts', 'singlets', 'tank tops'],
+  'jeans': ['trousers', 'suits'],
+  'trouser': ['trousers', 'suits'],
+  'pant': ['trousers', 'suits'],
+  'dress': ['dresses', 'suits'],
+  'kapda': ['fabrics', 'woven', 'cotton', 'clothing'],
+  'cloth': ['fabrics', 'woven', 'cotton'],
+  'jacket': ['jackets', 'overcoats'],
+  'sweater': ['sweaters', 'cardigans', 'pullovers'],
+  'joota': ['footwear', 'shoes'],
+  'shoes': ['footwear', 'shoes'],
+
+  // Medical & Healthcare
+  'medicine': ['medicaments', 'medicines', 'pharmaceutical'],
+  'dawai': ['medicaments', 'medicines', 'pharmaceutical'],
+  'tablet': ['medicaments', 'medicines'],
+  'pill': ['medicaments', 'medicines'],
+  'drug': ['medicaments', 'medicines', 'pharmaceutical'],
+  'hospital': ['hospital', 'medical', 'health'],
+  'clinic': ['medical', 'dental', 'health'],
+  
+  // Personal Care
+  'soap': ['soap', 'washing'],
+  'sabun': ['soap', 'washing'],
+  'shampoo': ['hair care', 'shampoo'],
+  'perfume': ['perfumes', 'toilet waters'],
+  'ittar': ['perfumes', 'toilet waters'],
+  'makeup': ['beauty', 'makeup'],
+  'cream': ['beauty', 'makeup', 'cream'],
+  'toothpaste': ['oral hygiene', 'toothpaste'],
+  'manjan': ['oral hygiene', 'toothpaste'],
+  
+  // Food & Groceries
+  'water': ['mineral water', 'drinking water', 'packaged'],
+  'pani': ['mineral water', 'drinking water', 'packaged'],
+  'juice': ['fruit juices', 'packaged'],
+  'tea': ['tea', 'green', 'black'],
+  'chai': ['tea', 'green', 'black'],
+  'coffee': ['coffee', 'beans'],
+  'rice': ['rice', 'basmati'],
+  'chawal': ['rice', 'basmati'],
+  'wheat': ['wheat', 'flour', 'atta'],
+  'gehu': ['wheat', 'flour'],
+  'atta': ['wheat flour', 'atta'],
+  'sugar': ['sugar', 'cane', 'beet'],
+  'chini': ['sugar', 'cane', 'beet'],
+  'shakkar': ['sugar', 'cane', 'beet'],
+  'oil': ['oil', 'soyabean', 'sunflower'],
+  'milk': ['milk', 'cream'],
+  'doodh': ['milk', 'cream'],
+  'bread': ['bread', 'biscuits', 'pastry'],
+  'biscuit': ['biscuits', 'bread', 'pastry'],
+  'chocolate': ['confectionery', 'chocolates'],
+  'mithai': ['confectionery', 'sweets'],
+  'coke': ['aerated drinks', 'soft drinks'],
+  'pepsi': ['aerated drinks', 'soft drinks'],
+  'soda': ['aerated drinks', 'soft drinks'],
+  'colddrink': ['aerated drinks', 'soft drinks'],
+  
+  // Services
+  'courier': ['courier services'],
+  'delivery': ['courier services', 'transport', 'goods'],
+  'transport': ['transport', 'goods', 'passengers'],
+  'shipping': ['transport', 'goods', 'sea transport'],
+  'rent': ['rental', 'property', 'commercial'],
+  'kiraya': ['rental', 'property', 'commercial'],
+  'hotel': ['room', 'accommodation', 'hospitality'],
+  'restaurant': ['restaurant', 'catering'],
+  'food': ['catering', 'restaurant', 'food'],
+  'catering': ['catering', 'outdoor'],
+  'web': ['website', 'hosting', 'it design', 'development'],
+  'website': ['website', 'hosting', 'it design'],
+  'hosting': ['website hosting', 'data hosting'],
+  'software': ['software', 'licensing', 'saas'],
+  'saas': ['saas', 'cloud', 'software', 'subscription'],
+  'app': ['software', 'it design', 'development', 'application'],
+  'consulting': ['consulting', 'advisory', 'management'],
+  'audit': ['auditing', 'financial'],
+  'tax': ['tax preparation', 'consulting'],
+  'legal': ['legal', 'advisory', 'documentation'],
+  'lawyer': ['legal', 'advisory', 'representation'],
+  'wakil': ['legal', 'advisory', 'representation'],
+  'loan': ['credit', 'lending', 'loans'],
+  'karz': ['credit', 'lending', 'loans'],
+  'insurance': ['insurance', 'life', 'general'],
+  'bima': ['insurance', 'life', 'general'],
+  'construction': ['construction', 'buildings', 'highways'],
+  'building': ['construction', 'buildings'],
+  'plumbing': ['plumbing', 'hvac'],
+  'painting': ['painting', 'glazing'],
+  'paint': ['painting', 'glazing'],
+  'electrical': ['electrical', 'installation'],
+  'advertising': ['advertising', 'internet'],
+  'marketing': ['advertising', 'market research', 'branding'],
+  'design': ['graphic design', 'branding', 'interior design', 'it design'],
+  'photo': ['photography', 'videography'],
+  'video': ['videography', 'photography', 'video recording'],
+  'training': ['training', 'coaching'],
+  'coaching': ['training', 'coaching'],
+  'tuition': ['education', 'training'],
+  'school': ['education', 'primary', 'secondary'],
+  'college': ['higher education'],
+  
+  // Hardware & Materials
+  'pipe': ['pipes', 'tubes', 'steel'],
+  'wire': ['cables', 'wires', 'connectors'],
+  'cable': ['cables', 'wires', 'connectors'],
+  'tar': ['cables', 'wires', 'connectors'],
+  'screw': ['screws', 'bolts', 'nuts'],
+  'bolt': ['bolts', 'screws', 'nuts'],
+  'nut': ['bolts', 'screws', 'nuts'],
+  'steel': ['steel', 'iron', 'coils', 'sheets'],
+  'loha': ['steel', 'iron'],
+  'glass': ['glass', 'bottles', 'glassware'],
+  'kanch': ['glass', 'glassware'],
+  'bottle': ['bottles', 'glass', 'plastic'],
+  'plastic': ['plastic', 'bottles', 'containers'],
+  'utensil': ['utensils', 'kitchen', 'steel'],
+  'bartan': ['utensils', 'kitchen', 'steel'],
+  'kitchen': ['utensils', 'kitchen', 'kitchenware']
+};
+
+// ═══════════════════════════════════════════
+// SEARCH FUNCTION — Enhanced fuzzy match with synonyms
 // ═══════════════════════════════════════════
 export const searchHSN = (query) => {
   if (!query || query.trim().length < 2) return [];
   
   const normalizedQuery = query.toLowerCase().trim();
   const words = normalizedQuery.split(/\s+/);
+
+  // Expand query words with synonyms
+  const expandedWords = new Set(words);
+  words.forEach(word => {
+    if (SYNONYMS[word]) {
+      SYNONYMS[word].forEach(syn => {
+        syn.split(/\s+/).forEach(w => expandedWords.add(w));
+      });
+    }
+  });
+
+  const allSearchWords = [...expandedWords];
 
   const results = hsnCodes
     .map(item => {
@@ -311,11 +529,19 @@ export const searchHSN = (query) => {
         score += 50;
       }
       
-      // Word-by-word match
+      // Original word-by-word match (higher weight)
       words.forEach(word => {
-        if (desc.includes(word)) score += 20;
-        if (cat.includes(word)) score += 10;
+        if (desc.includes(word)) score += 25;
+        if (cat.includes(word)) score += 12;
         if (code.includes(word)) score += 15;
+      });
+
+      // Synonym-expanded word match (slightly lower weight)
+      allSearchWords.forEach(word => {
+        if (!words.includes(word)) { // Only bonus for synonym-expanded words
+          if (desc.includes(word)) score += 15;
+          if (cat.includes(word)) score += 8;
+        }
       });
       
       // Starts with match

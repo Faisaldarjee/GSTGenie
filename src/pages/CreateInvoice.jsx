@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import Layout from '../components/Layout/Layout';
 import { 
   Zap, 
@@ -8,13 +9,136 @@ import {
   CheckCircle,
   Loader2,
   X,
-  Search
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Common/Toast';
 import { searchHSN } from '../data/hsnCodes';
 import './CreateInvoice.css';
+
+// ═══════════════════════════════════════════
+// HSN Popup Portal Component — renders outside table DOM to escape overflow clipping
+// ═══════════════════════════════════════════
+const HSNPopup = ({ anchorRect, query, results, onSearch, onSelect, onClose }) => {
+  const popupRef = useRef(null);
+  const inputRef = useRef(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+  // Focus search input on mount
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
+
+  // Close on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex(prev => Math.min(prev + 1, results.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && highlightedIndex >= 0 && results[highlightedIndex]) {
+      e.preventDefault();
+      onSelect(results[highlightedIndex]);
+    } else if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
+  // Reset highlight when results change
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [results]);
+
+  // Calculate position
+  if (!anchorRect) return null;
+
+  const popupWidth = 420;
+  let left = anchorRect.left + anchorRect.width / 2 - popupWidth / 2;
+  let top = anchorRect.bottom + 8;
+
+  // Keep within viewport
+  if (left < 12) left = 12;
+  if (left + popupWidth > window.innerWidth - 12) left = window.innerWidth - popupWidth - 12;
+  if (top + 340 > window.innerHeight) {
+    top = anchorRect.top - 340 - 8;
+  }
+
+  return ReactDOM.createPortal(
+    <div
+      ref={popupRef}
+      className="hsn-popup-portal"
+      style={{ top: `${top}px`, left: `${left}px`, width: `${popupWidth}px` }}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="hsn-popup-header">
+        <div className="hsn-popup-search">
+          <Search size={14} />
+          <input 
+            ref={inputRef}
+            type="text" 
+            placeholder="Search HSN... e.g., laptop, consulting, chair" 
+            value={query}
+            onChange={e => onSearch(e.target.value)}
+          />
+        </div>
+        <button className="hsn-popup-close" onClick={onClose} type="button">
+          <X size={14} />
+        </button>
+      </div>
+      <div className="hsn-popup-results">
+        {results.length > 0 ? (
+          results.map((hsn, idx) => (
+            <div 
+              key={idx} 
+              className={`hsn-result-item ${highlightedIndex === idx ? 'highlighted' : ''}`}
+              onClick={() => onSelect(hsn)}
+              onMouseEnter={() => setHighlightedIndex(idx)}
+            >
+              <div className="hsn-result-left">
+                <span className="hsn-result-code">{hsn.code}</span>
+                <span className="hsn-result-desc">{hsn.description}</span>
+              </div>
+              <div className="hsn-result-right">
+                <span className="hsn-result-rate">{hsn.rate}%</span>
+                <span className="hsn-result-cat">{hsn.category}</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="hsn-no-results">
+            <div className="hsn-no-results-icon">🔍</div>
+            {query.length < 2 
+              ? 'Type at least 2 characters to search...' 
+              : `No matching HSN codes found for "${query}"`
+            }
+          </div>
+        )}
+      </div>
+      {results.length > 0 && (
+        <div className="hsn-popup-footer">
+          <span>↑↓ navigate</span>
+          <span>↵ select</span>
+          <span>esc close</span>
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+};
 
 const CreateInvoice = () => {
   const navigate = useNavigate();
@@ -37,7 +161,8 @@ const CreateInvoice = () => {
   const [hsnActiveItemId, setHsnActiveItemId] = useState(null);
   const [hsnQuery, setHsnQuery] = useState('');
   const [hsnResults, setHsnResults] = useState([]);
-  const hsnPopupRef = useRef(null);
+  const [hsnAnchorRect, setHsnAnchorRect] = useState(null);
+  const aiButtonRefs = useRef({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,17 +185,6 @@ const CreateInvoice = () => {
       }
     };
     fetchData();
-  }, []);
-
-  // Close HSN popup on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (hsnPopupRef.current && !hsnPopupRef.current.contains(e.target)) {
-        setHsnActiveItemId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
@@ -106,28 +220,55 @@ const CreateInvoice = () => {
   };
 
   // HSN Suggestion handlers
-  const openHSNSuggest = (itemId) => {
+  const openHSNSuggest = useCallback((itemId) => {
     const item = items.find(i => i.id === itemId);
-    setHsnActiveItemId(itemId);
-    setHsnQuery(item?.description || '');
-    setHsnResults(searchHSN(item?.description || ''));
-  };
+    const description = item?.description || '';
+    const searchResults = searchHSN(description);
+    
+    // Auto-fill: If there's a single high-confidence result, auto-apply it
+    if (description.length >= 2 && searchResults.length > 0 && searchResults[0].score >= 80) {
+      const bestMatch = searchResults[0];
+      setItems(prev => prev.map(i => {
+        if (i.id === itemId) return { ...i, hsn: bestMatch.code };
+        return i;
+      }));
+      toast.success(
+        `⚡ Auto-filled HSN ${bestMatch.code} — ${bestMatch.description} (GST ${bestMatch.rate}%)`,
+      );
+      return; // Don't open popup for auto-fills
+    }
 
-  const handleHSNSearch = (query) => {
+    // Get button position for popup placement
+    const buttonEl = aiButtonRefs.current[itemId];
+    if (buttonEl) {
+      setHsnAnchorRect(buttonEl.getBoundingClientRect());
+    }
+    
+    setHsnActiveItemId(itemId);
+    setHsnQuery(description);
+    setHsnResults(searchResults);
+  }, [items, toast]);
+
+  const handleHSNSearch = useCallback((query) => {
     setHsnQuery(query);
     setHsnResults(searchHSN(query));
-  };
+  }, []);
 
-  const selectHSN = (itemId, hsnItem) => {
-    setItems(items.map(item => {
-      if (item.id === itemId) {
+  const selectHSN = useCallback((hsnItem) => {
+    if (!hsnActiveItemId) return;
+    setItems(prev => prev.map(item => {
+      if (item.id === hsnActiveItemId) {
         return { ...item, hsn: hsnItem.code };
       }
       return item;
     }));
     setHsnActiveItemId(null);
     toast.success(`HSN ${hsnItem.code} applied — GST ${hsnItem.rate}%`);
-  };
+  }, [hsnActiveItemId, toast]);
+
+  const closeHSNPopup = useCallback(() => {
+    setHsnActiveItemId(null);
+  }, []);
 
   const handleGenerateInvoice = async () => {
     if (!selectedClient) {
@@ -275,59 +416,20 @@ const CreateInvoice = () => {
                       <td>
                         <input className="table-input" value={item.description} onChange={e => updateItem(item.id, 'description', e.target.value)} placeholder="e.g., Web Development Services" />
                       </td>
-                      <td style={{ position: 'relative' }}>
+                      <td>
                         <div className="hsn-input-group">
                           <input className="table-input" value={item.hsn} onChange={e => updateItem(item.id, 'hsn', e.target.value)} placeholder="HSN" />
-                          <button className="hsn-suggest-chip" onClick={() => openHSNSuggest(item.id)} type="button">
-                            <Zap size={10} />
+                          <button 
+                            ref={el => aiButtonRefs.current[item.id] = el}
+                            className="hsn-suggest-chip" 
+                            onClick={() => openHSNSuggest(item.id)} 
+                            type="button"
+                            title="AI-powered HSN suggestion"
+                          >
+                            <Sparkles size={10} />
                             <span>AI</span>
                           </button>
                         </div>
-
-                        {/* HSN Suggestion Popup */}
-                        {hsnActiveItemId === item.id && (
-                          <div className="hsn-popup" ref={hsnPopupRef}>
-                            <div className="hsn-popup-header">
-                              <div className="hsn-popup-search">
-                                <Search size={14} />
-                                <input 
-                                  type="text" 
-                                  placeholder="Search HSN... e.g., laptop, consulting" 
-                                  value={hsnQuery}
-                                  onChange={e => handleHSNSearch(e.target.value)}
-                                  autoFocus
-                                />
-                              </div>
-                              <button className="hsn-popup-close" onClick={() => setHsnActiveItemId(null)}>
-                                <X size={14} />
-                              </button>
-                            </div>
-                            <div className="hsn-popup-results">
-                              {hsnResults.length > 0 ? (
-                                hsnResults.map((hsn, idx) => (
-                                  <div 
-                                    key={idx} 
-                                    className="hsn-result-item"
-                                    onClick={() => selectHSN(item.id, hsn)}
-                                  >
-                                    <div className="hsn-result-left">
-                                      <span className="hsn-result-code">{hsn.code}</span>
-                                      <span className="hsn-result-desc">{hsn.description}</span>
-                                    </div>
-                                    <div className="hsn-result-right">
-                                      <span className="hsn-result-rate">{hsn.rate}%</span>
-                                      <span className="hsn-result-cat">{hsn.category}</span>
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="hsn-no-results">
-                                  {hsnQuery.length < 2 ? 'Type at least 2 characters to search...' : 'No matching HSN codes found.'}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </td>
                       <td><input className="table-input text-center" value={item.qty} type="number" min="1" onChange={e => updateItem(item.id, 'qty', e.target.value)} /></td>
                       <td>
@@ -409,6 +511,18 @@ const CreateInvoice = () => {
           </div>
         </div>
       </div>
+
+      {/* HSN Popup Portal — renders outside table to escape overflow */}
+      {hsnActiveItemId && (
+        <HSNPopup
+          anchorRect={hsnAnchorRect}
+          query={hsnQuery}
+          results={hsnResults}
+          onSearch={handleHSNSearch}
+          onSelect={selectHSN}
+          onClose={closeHSNPopup}
+        />
+      )}
     </Layout>
   );
 };
